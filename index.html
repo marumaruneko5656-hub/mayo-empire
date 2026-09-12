@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大マヨネーズ銀河帝国 リアルタイム統合通信HUB</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&family=Zen+Maru+Gothic:wght@700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        mayo: {
+                            50: '#FFFDE7',
+                            100: '#FFF9C4',
+                            200: '#FFF59D',
+                            300: '#FFE082',
+                            400: '#FFCA28',
+                            500: '#FFC107',
+                            600: '#FFB300',
+                            700: '#F57F17',
+                            accent: '#FFF8DC',
+                        },
+                        samurai: {
+                            dark: '#0A0D10',
+                            sidebar: '#12171D',
+                            chatBg: '#182028',
+                            cardBg: '#1E2933',
+                            hover: '#283644',
+                            border: '#2A3846',
+                            red: '#D32F2F',
+                            gold: '#D4AF37'
+                        }
+                    },
+                    fontFamily: {
+                        rock: ['"RocknRoll One"', 'sans-serif'],
+                        maru: ['"Zen Maru Gothic"', 'sans-serif'],
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0A0D10;
+            color: #E2E8F0;
+            font-family: 'Noto Sans JP', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0A0D10;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A3846;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FFC107;
+        }
+
+        .channel-active {
+            background-color: rgba(255, 193, 7, 0.15);
+            border-left: 4px solid #FFC107;
+            color: #FFF9C4 !important;
+        }
+
+        .gold-border-glow {
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.25), inset 0 0 10px rgba(255, 193, 7, 0.1);
+        }
+
+        .red-alert-glow {
+            box-shadow: 0 0 20px rgba(211, 47, 47, 0.4), inset 0 0 10px rgba(255, 193, 7, 0.2);
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.88; transform: scale(0.99); }
+        }
+        .animate-directive {
+            animation: pulse-slow 3s infinite ease-in-out;
+        }
+
+        .tatami-pattern {
+            background-color: #12171D;
+            background-image: radial-gradient(#283644 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+
+        .hashtag-pill {
+            background-color: rgba(255, 193, 7, 0.18);
+            color: #FFE082;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .hashtag-pill:hover {
+            background-color: rgba(255, 193, 7, 0.4);
+            color: #FFFFFF;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen text-gray-200 antialiased select-none">
+
+    <!-- TOP TELEMETRY & EMPIRE HEADER -->
+    <header class="h-16 bg-samurai-dark border-b border-mayo-500/30 flex items-center justify-between px-4 z-30 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-mayo-400 to-mayo-600 rounded-xl flex items-center justify-center font-black text-samurai-dark text-2xl shadow-lg border-2 border-white/80 transform hover:rotate-6 transition-transform cursor-pointer" onclick="playSquirtSound()">
+                マ
+            </div>
+            <div>
+                <h1 class="font-rock text-sm sm:text-base md:text-lg font-bold text-mayo-100 flex items-center gap-2">
+                    大マヨネーズ銀河帝国 <span class="text-xs text-mayo-400 font-sans font-normal hidden md:inline">｜ リアルタイム統合通信HUB</span>
+                </h1>
+                <p class="text-[10px] sm:text-xs text-gray-400 font-mono flex items-center gap-2">
+                    <span id="networkStatus" class="text-yellow-400 flex items-center gap-1"><i class="fa-solid fa-spinner animate-spin"></i> 帝国通信回線接続中...</span>
+                    <span class="text-green-400 hidden sm:inline">｜ 5G電波: 最強</span>
+                    <span class="text-mayo-300 hidden lg:inline">｜ 画像＆タグ同期対応</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- System Stats & Profile Settings -->
+        <div class="flex items-center space-x-2 sm:space-x-3 text-xs font-mono">
+            <div class="hidden sm:flex flex-col items-end bg-black/50 px-3 py-1 rounded-lg border border-mayo-500/30">
+                <span class="text-[10px] text-gray-400">帝国マヨ備蓄量</span>
+                <span id="mayoReserves" class="font-bold text-mayo-300 text-sm">999,999 GAL</span>
+            </div>
+
+            <!-- Citizen ID Button -->
+            <button onclick="toggleCitizenCardModal()" class="bg-mayo-500 hover:bg-mayo-400 text-samurai-dark font-black px-3 py-1.5 rounded-lg border border-white shadow-md transition-all active:scale-95 flex items-center gap-1.5 text-xs">
+                <i class="fa-solid fa-id-card"></i>
+                <span class="hidden md:inline">帝国民身分証</span>
+            </button>
+
+            <!-- Audio Toggle -->
+            <button onclick="toggleAudio()" id="audioBtn" class="bg-samurai-sidebar hover:bg-samurai-hover border border-mayo-500/40 text-mayo-300 p-2 rounded-lg transition-all" title="SE/効果音切替">
+                <i class="fa-solid fa-volume-high text-sm" id="audioIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE CONTAINER -->
+    <div class="flex flex-1 overflow-hidden relative">
+
+        <!-- 1. LEFT SIDEBAR: CHANNELS, TAG ROOMS & USER IDENTITY -->
+        <aside class="w-56 md:w-64 bg-samurai-sidebar border-r border-samurai-border flex flex-col shrink-0">
+            
+            <div class="p-3 border-b border-samurai-border flex items-center justify-between bg-black/30">
+                <span class="font-rock text-xs text-mayo-400 tracking-wider"><i class="fa-solid fa-satellite-dish mr-1"></i> 通信チャンネル</span>
+                <span class="text-[10px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded font-mono">ONLINE</span>
+            </div>
+
+            <!-- Channel & Tag Room List -->
+            <nav class="flex-1 overflow-y-auto p-2 space-y-4 text-xs md:text-sm font-medium" id="channelListContainer">
+                <div>
+                    <div class="text-[10px] font-bold text-gray-500 uppercase px-2 mb-1 tracking-wider">メイン作戦室</div>
+                    <div class="space-y-1" id="mainChannelList">
+                        <!-- Standard channels -->
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-[10px] font-bold text-mayo-400 uppercase px-2 mb-1 tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-tags text-[10px]"></i> タグ別トピック部屋
+                    </div>
+                    <div class="space-y-1" id="tagChannelList">
+                        <!-- Tag channels -->
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Current User Card at Bottom of Sidebar -->
+            <div class="p-3 bg-black/60 border-t border-samurai-border flex items-center gap-3">
+                <div class="relative shrink-0">
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-500 to-red-600 flex items-center justify-center font-bold text-white shadow border border-white/40" id="sidebarAvatar">
+                        覇
+                    </div>
+                    <span class="w-2.5 h-2.5 bg-green-500 rounded-full absolute bottom-0 right-0 border-2 border-samurai-dark"></span>
+                </div>
+                <div class="flex-1 overflow-hidden">
+                    <div class="text-xs font-bold text-white truncate" id="userDisplayName">覇王 (Player)</div>
+                    <div class="text-[10px] text-mayo-400 truncate" id="sidebarUserRank">特命マヨ監察官</div>
+                </div>
+                <button onclick="toggleCitizenCardModal()" class="text-gray-400 hover:text-mayo-300 text-xs p-1" title="設定・変更">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 2. CENTER: REAL-TIME CHAT WINDOW & COMMAND CENTER -->
+        <main class="flex-1 flex flex-col bg-samurai-chatBg relative overflow-hidden">
+            
+            <!-- Active Channel Header Bar -->
+            <div class="h-12 bg-samurai-sidebar/90 backdrop-blur border-b border-samurai-border flex items-center justify-between px-4 shrink-0 z-10">
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <i id="channelHeaderIcon" class="fa-solid fa-hashtag text-mayo-400 text-lg shrink-0"></i>
+                    <span class="font-bold text-sm md:text-base text-white truncate" id="currentChannelTitle">マヨラー雑談処</span>
+                    <span class="text-xs text-gray-400 hidden sm:inline border-l border-samurai-border pl-2 ml-2 truncate" id="currentChannelDesc">帝国全兵員のリアルタイム雑談＆マヨネーズ愛の共有部屋</span>
+                </div>
+
+                <div class="text-xs text-gray-400 flex items-center gap-3 shrink-0">
+                    <span id="activeTagFilterBadge" class="hidden bg-mayo-500/20 text-mayo-300 border border-mayo-500/50 px-2 py-0.5 rounded text-[11px] items-center gap-1">
+                        <span id="activeFilterTagName">#タグ</span>
+                        <button onclick="clearTagFilter()" class="hover:text-white font-bold ml-1">✕</button>
+                    </span>
+                    <span><i class="fa-solid fa-earth-asia text-green-400"></i> オンライン: <strong class="text-white font-mono" id="onlineCount">1</strong> 人</span>
+                    <button onclick="toggleMemberList()" class="lg:hidden text-mayo-400 hover:text-white p-1">
+                        <i class="fa-solid fa-user-group"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- DAILY COMMAND CENTER BANNER (リアルタイム最高命令) -->
+            <div id="commandBanner" class="bg-gradient-to-r from-red-950 via-samurai-dark to-red-950 border-b-2 border-red-600 p-3.5 red-alert-glow relative shrink-0 transition-all">
+                <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    
+                    <div class="flex items-start gap-3 flex-1">
+                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-600 to-red-800 border-2 border-yellow-400 flex items-center justify-center shrink-0 text-xl text-white shadow-lg animate-bounce">
+                            <i class="fa-solid fa-scroll"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 wrap">
+                                <span class="text-[10px] bg-red-600 text-white font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider">最高指揮官絶対命令 (全宇宙同時配信)</span>
+                                <span class="text-xs font-bold text-yellow-300" id="commandSpeaker">土方十四郎 (最高指導者)</span>
+                                <span class="text-[10px] text-gray-400 font-mono" id="commandTime">最新発令</span>
+                            </div>
+                            <p class="text-sm font-bold text-mayo-100 font-maru mt-1 leading-snug" id="commandText">
+                                「全軍、昼飯のマヨネーズ消費量を3倍に引き上げろ！一口食うごとに『マヨネーズ万歳』と唱えろ！反論は即切腹だ！」
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Command Action Buttons -->
+                    <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                        <button onclick="handleCommandPledge()" class="bg-mayo-500 hover:bg-mayo-400 text-samurai-dark font-extrabold px-3 py-1.5 rounded-lg text-xs shadow transition-all active:scale-95 flex items-center gap-1">
+                            <i class="fa-solid fa-check"></i>
+                            <span>サー・イエス・サー！</span>
+                        </button>
+                        <button onclick="generateDailyCommandGemini()" class="bg-red-700 hover:bg-red-600 text-white font-bold px-2.5 py-1.5 rounded-lg text-xs border border-red-400 transition-all active:scale-95 flex items-center gap-1" title="Gemini AIで新しい命令を発令">
+                            <i class="fa-solid fa-wand-magic-sparkles text-yellow-300"></i>
+                            <span class="hidden sm:inline">新命令発令</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 tatami-pattern" id="chatContainer">
+                <div class="text-center text-gray-500 text-xs py-8 font-mono">
+                    <i class="fa-solid fa-spinner animate-spin text-mayo-400 text-xl block mb-2"></i>
+                    銀河通信回線からメッセージ履歴を受信中...
+                </div>
+            </div>
+
+            <!-- Image Upload Preview Container -->
+            <div id="imagePreviewContainer" class="hidden bg-samurai-dark border-t border-samurai-border p-2.5 px-4 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <img id="imagePreview" src="" class="w-12 h-12 object-cover rounded-lg border border-mayo-500 shadow">
+                    <div>
+                        <div class="text-xs font-bold text-mayo-300" id="imageFileName">添付画像</div>
+                        <div class="text-[10px] text-gray-400">メッセージ送信時に添付されます</div>
+                    </div>
+                </div>
+                <button onclick="clearAttachedImage()" class="text-gray-400 hover:text-red-400 p-1 text-sm" title="画像を削除">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Preset Stamps Selector Panel -->
+            <div id="presetStampPanel" class="hidden bg-samurai-sidebar border-t border-samurai-border p-3 shrink-0 transition-all">
+                <div class="text-[11px] font-bold text-mayo-300 mb-2 flex items-center justify-between">
+                    <span><i class="fa-solid fa-icons mr-1"></i> 帝国特製プリセットスタンプ</span>
+                    <button onclick="toggleStampPanel()" class="text-gray-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="grid grid-cols-4 sm:grid-cols-6 gap-2" id="presetStampGrid">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="p-3 md:p-4 bg-samurai-sidebar border-t border-samurai-border shrink-0">
+                <form id="chatForm" onsubmit="handleSendMessage(event)" class="flex flex-col gap-2">
+                    
+                    <div class="flex items-center gap-2">
+                        <!-- Image Upload Button -->
+                        <label class="cursor-pointer bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 border border-samurai-border p-3 rounded-xl transition-all flex items-center justify-center shrink-0" title="画像を添付">
+                            <i class="fa-solid fa-image text-base"></i>
+                            <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                        </label>
+
+                        <!-- Preset Stamp Button -->
+                        <button type="button" onclick="toggleStampPanel()" class="bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 border border-samurai-border p-3 rounded-xl transition-all shrink-0" title="帝国スタンプ">
+                            <i class="fa-solid fa-face-smile text-base"></i>
+                        </button>
+
+                        <div class="relative flex-1">
+                            <input type="text" id="chatInput" placeholder="#メッセージと #ハッシュタグ を送信..." 
+                                class="w-full bg-samurai-dark border border-samurai-border focus:border-mayo-500 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none transition-all pr-12 shadow-inner">
+                            <button type="button" class="absolute right-3 top-2.5 text-gray-400 hover:text-mayo-400 p-1 text-base transition-colors" onclick="insertMayoEmoji()" title="マヨネーズ絵文字を挿入">
+                                <i class="fa-solid fa-bottle-droplet"></i>
+                            </button>
+                        </div>
+
+                        <button type="submit" id="sendBtn" class="bg-gradient-to-r from-mayo-500 to-mayo-600 hover:from-mayo-400 hover:to-mayo-500 text-samurai-dark font-black px-5 py-3 rounded-xl transition-all shadow-md active:scale-95 text-sm shrink-0 flex items-center gap-2 border border-white/40">
+                            <span>送信</span>
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+
+                    <!-- Quick Tag Chips Bar -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto text-[11px] pt-1 no-scrollbar">
+                        <span class="text-gray-500 text-[10px] shrink-0 font-mono">クイックタグ:</span>
+                        <button type="button" onclick="insertTagToInput('#マヨ砲')" class="bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 px-2 py-0.5 rounded border border-samurai-border shrink-0">#マヨ砲</button>
+                        <button type="button" onclick="insertTagToInput('#マヨ料理')" class="bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 px-2 py-0.5 rounded border border-samurai-border shrink-0">#マヨ料理</button>
+                        <button type="button" onclick="insertTagToInput('#土方')" class="bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 px-2 py-0.5 rounded border border-samurai-border shrink-0">#土方</button>
+                        <button type="button" onclick="insertTagToInput('#銀時甘党')" class="bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 px-2 py-0.5 rounded border border-samurai-border shrink-0">#銀時甘党</button>
+                        <button type="button" onclick="insertTagToInput('#屁怒絽防衛線')" class="bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 px-2 py-0.5 rounded border border-samurai-border shrink-0">#屁怒絽防衛線</button>
+                        <button type="button" onclick="insertTagToInput('#5G電波')" class="bg-samurai-cardBg hover:bg-samurai-hover text-mayo-300 px-2 py-0.5 rounded border border-samurai-border shrink-0">#5G電波</button>
+                    </div>
+
+                </form>
+            </div>
+
+        </main>
+
+        <!-- 3. RIGHT SIDEBAR: REAL-TIME ONLINE MEMBERS ROSTER -->
+        <aside id="memberSidebar" class="w-60 bg-samurai-sidebar border-l border-samurai-border flex-col hidden lg:flex shrink-0">
+            <div class="p-3 border-b border-samurai-border flex items-center justify-between bg-black/30">
+                <span class="font-rock text-xs text-mayo-400 tracking-wider"><i class="fa-solid fa-users-gear mr-1"></i> 現在オンラインの仲間</span>
+                <span class="text-xs text-gray-400 font-mono" id="sidebarOnlineCount">1名</span>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3 space-y-2 text-xs" id="memberList">
+                <!-- Real users rendered dynamically -->
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- IMAGE EXPANDED PREVIEW MODAL -->
+    <div id="imageModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4" onclick="closeImageModal()">
+        <div class="relative max-w-4xl w-full flex flex-col items-center justify-center" onclick="event.stopPropagation()">
+            <button onclick="closeImageModal()" class="absolute -top-10 right-0 text-gray-300 hover:text-white text-2xl font-bold">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img id="modalImageView" src="" class="max-h-[85vh] max-w-full rounded-xl border-2 border-mayo-500/80 shadow-2xl object-contain">
+            <p id="modalImageCaption" class="text-xs text-mayo-200 mt-2 font-mono text-center"></p>
+        </div>
+    </div>
+
+    <!-- CITIZEN ID & CHARACTER SETTINGS MODAL -->
+    <div id="citizenModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gradient-to-b from-samurai-cardBg to-samurai-dark border-2 border-mayo-500/60 rounded-2xl max-w-md w-full p-6 gold-border-glow relative shadow-2xl overflow-y-auto max-h-[90vh]">
+            <button onclick="toggleCitizenCardModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Card Header -->
+            <div class="text-center border-b border-mayo-500/30 pb-4 mb-4">
+                <div class="inline-block bg-mayo-500 text-samurai-dark font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-widest mb-1">
+                    GREAT MAYONNAISE GALACTIC EMPIRE
+                </div>
+                <h3 class="font-rock text-xl text-mayo-100">大マヨネーズ帝国 臣民身分設定</h3>
+            </div>
+
+            <!-- Profile Settings Form -->
+            <div class="space-y-4 mb-5">
+                <div>
+                    <label class="block text-xs font-bold text-mayo-300 mb-1">表示名 (ユーザー名)</label>
+                    <input type="text" id="inputUserName" class="w-full bg-samurai-dark border border-samurai-border rounded-lg p-2.5 text-sm text-white focus:border-mayo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-mayo-300 mb-1">役職・肩書き</label>
+                    <input type="text" id="inputUserRank" class="w-full bg-samurai-dark border border-samurai-border rounded-lg p-2.5 text-sm text-white focus:border-mayo-500 focus:outline-none">
+                </div>
+
+                <!-- Avatar Character Preset Buttons -->
+                <div>
+                    <label class="block text-xs font-bold text-mayo-300 mb-2">アバターアイコン選択</label>
+                    <div class="grid grid-cols-5 gap-2" id="avatarPresets">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment Badges -->
+            <div class="mb-5 bg-black/40 p-3 rounded-xl border border-samurai-border text-xs">
+                <div class="text-gray-400 text-[10px] mb-1">支給装備品</div>
+                <div class="flex flex-wrap gap-1.5 text-[11px]">
+                    <span class="bg-samurai-hover text-mayo-100 px-2 py-0.5 rounded border border-mayo-500/30">マヨ焼き入れ漆黒刀</span>
+                    <span class="bg-samurai-hover text-mayo-100 px-2 py-0.5 rounded border border-mayo-500/30">極細宇宙繊維竹歯ブラシ</span>
+                    <span class="bg-samurai-hover text-mayo-100 px-2 py-0.5 rounded border border-mayo-500/30">特製ミントマヨ</span>
+                </div>
+            </div>
+
+            <!-- Save Profile Button -->
+            <button onclick="saveUserProfile()" class="w-full bg-gradient-to-r from-mayo-500 to-mayo-600 hover:from-mayo-400 hover:to-mayo-500 text-samurai-dark font-black py-3 rounded-xl transition-all shadow-lg active:scale-98 flex items-center justify-center gap-2 text-sm">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>設定を保存して宇宙通信に反映</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- FIREBASE SERVICES MODULE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Setup & Environment Fallbacks
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mayo-empire-hub';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                apiKey: "AIzaSyDemoConfigForEmpireApp1234567",
+                authDomain: "mayo-empire.firebaseapp.com",
+                projectId: "mayo-empire-app",
+                storageBucket: "mayo-empire.appspot.com",
+                messagingSenderId: "1234567890",
+                appId: "1:1234567890:web:abcdef123456"
+            };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // State Variables
+        window.db = db;
+        window.appId = appId;
+        window.auth = auth;
+
+        let currentUser = null;
+        let currentUserId = null;
+        let unsubscribeChat = null;
+        let unsubscribeMembers = null;
+        let unsubscribeCommand = null;
+
+        // User Identity Presets
+        window.userProfile = {
+            name: '覇王 (Player)',
+            rank: '特命マヨ監察官',
+            avatar: '覇',
+            color: 'bg-yellow-500 text-black'
+        };
+
+        // Authenticate User First
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth fallback to anonymous", err);
+                try { await signInAnonymously(auth); } catch(e){}
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                currentUserId = user.uid;
+                document.getElementById('networkStatus').innerHTML = `<i class="fa-solid fa-wifi text-green-400"></i> 銀河通信同期完了`;
+                
+                // Initialize presence & subscriptions
+                updatePresence();
+                setInterval(updatePresence, 30000); // Heartbeat
+                
+                subscribeToMessages(window.currentChannel || 'general');
+                subscribeToOnlineMembers();
+                subscribeToDirectives();
+            }
+        });
+
+        // Update Online Presence in Firestore Public Collection
+        async function updatePresence() {
+            if (!currentUser) return;
+            try {
+                const presenceDoc = doc(db, 'artifacts', appId, 'public', 'data', 'onlineUsers', currentUser.uid);
+                await setDoc(presenceDoc, {
+                    uid: currentUser.uid,
+                    name: window.userProfile.name,
+                    rank: window.userProfile.rank,
+                    avatar: window.userProfile.avatar,
+                    color: window.userProfile.color,
+                    lastSeen: serverTimestamp()
+                }, { merge: true });
+            } catch (err) {
+                console.error("Presence error:", err);
+            }
+        }
+        window.updatePresence = updatePresence;
+
+        // Subscribe to Channel Messages
+        window.subscribeToMessages = function(channelKey) {
+            if (unsubscribeChat) unsubscribeChat();
+
+            const messagesContainer = document.getElementById('chatContainer');
+            messagesContainer.innerHTML = `<div class="text-center text-gray-500 text-xs py-8 font-mono"><i class="fa-solid fa-spinner animate-spin text-mayo-400 text-xl block mb-2"></i> #${channelKey} メッセージをリアルタイム受信中...</div>`;
+
+            // Firestore Collection Path
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chat_${channelKey}`);
+            
+            unsubscribeChat = onSnapshot(chatCol, (snapshot) => {
+                const messages = [];
+                snapshot.forEach(doc => {
+                    messages.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Client-side sort by timestamp
+                messages.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+
+                window.cachedMessages = messages;
+                renderMessagesList(messages);
+            }, (err) => {
+                console.error("Chat snapshot error:", err);
+            });
+        };
+
+        // Send Real-Time Message to Firestore (with optional image and tags)
+        window.sendRealtimeMessage = async function(channelKey, text, imageUrl = null, tags = []) {
+            if (!currentUser) return;
+            try {
+                const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chat_${channelKey}`);
+                
+                // Extract hashtags automatically from text if any
+                const extractedTags = extractTagsFromText(text);
+                const allTags = Array.from(new Set([...tags, ...extractedTags]));
+
+                await addDoc(chatCol, {
+                    sender: window.userProfile.name,
+                    rank: window.userProfile.rank,
+                    avatar: window.userProfile.avatar,
+                    color: window.userProfile.color,
+                    uid: currentUser.uid,
+                    text: text,
+                    imageUrl: imageUrl || null,
+                    tags: allTags,
+                    createdAt: serverTimestamp()
+                });
+
+                window.playSquirtSound();
+
+                // Trigger AI Bot logic locally if keywords match
+                setTimeout(() => {
+                    window.checkAndTriggerAiResponse(channelKey, text);
+                }, 800);
+
+            } catch (err) {
+                console.error("Failed to send message:", err);
+            }
+        };
+
+        // Helper to extract #tags from text
+        function extractTagsFromText(text) {
+            if (!text) return [];
+            const matches = text.match(/#[^\s#]+/g);
+            return matches ? matches.map(t => t.trim()) : [];
+        }
+
+        // Subscribe to Online Members List
+        function subscribeToOnlineMembers() {
+            const membersCol = collection(db, 'artifacts', appId, 'public', 'data', 'onlineUsers');
+            unsubscribeMembers = onSnapshot(membersCol, (snapshot) => {
+                const members = [];
+                const now = Date.now();
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const lastSeenMs = data.lastSeen?.toMillis() || 0;
+                    if (now - lastSeenMs < 120000 || !data.lastSeen) {
+                        members.push(data);
+                    }
+                });
+
+                renderMembersList(members);
+            }, (err) => console.error("Members error:", err));
+        }
+
+        // Subscribe to Global Commander Directives
+        function subscribeToDirectives() {
+            const directiveDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'dailyDirective');
+            unsubscribeCommand = onSnapshot(directiveDoc, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    document.getElementById('commandSpeaker').textContent = data.speaker || '土方十四郎 (最高指導者)';
+                    document.getElementById('commandText').textContent = data.text || '「全軍マヨネーズを補給せよ！」';
+                    window.playSlashSound();
+                }
+            }, (err) => console.error("Directive error:", err));
+        }
+
+        // Broadcast New Directive Globally
+        window.broadcastDirective = async function(speaker, text) {
+            if (!currentUser) return;
+            try {
+                const directiveDoc = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'dailyDirective');
+                await setDoc(directiveDoc, {
+                    speaker: speaker,
+                    text: text,
+                    updatedAt: serverTimestamp(),
+                    updatedBy: currentUser.uid
+                });
+            } catch (err) {
+                console.error("Directive update error:", err);
+            }
+        };
+
+        initAuth();
+    </script>
+
+    <script>
+        // GLOBAL APP STATE & CHANNELS
+        let currentChannel = 'general';
+        window.currentChannel = currentChannel;
+        let isAudioEnabled = true;
+        let attachedImageBase64 = null;
+        let activeTagFilter = null;
+        window.cachedMessages = [];
+
+        // Channel Definitions (Standard + Tag Specific Topic Rooms)
+        const channels = {
+            // Main Standard Channels
+            'orders': { type: 'main', name: '絶対命令・通達', icon: 'fa-bullhorn', desc: '最高指導者・土方十四郎および最高顧問団からの絶対令', tag: '#絶対命令' },
+            'general': { type: 'main', name: 'マヨラー雑談処', icon: 'fa-hashtag', desc: '帝国全兵員のリアルタイム雑談＆マヨネーズ愛の共有部屋', tag: '#雑談' },
+            'strategy': { type: 'main', name: '戦線・マヨ砲運用部', icon: 'fa-crosshairs', desc: '不義遊戯術式＆マヨネーズ砲運用戦略スレッド', tag: '#作戦' },
+            'lounge': { type: 'main', name: '居酒屋「縁側」', icon: 'fa-whiskey-glass', desc: '畳と縁側でくつろぐ兵士たちの非公式ラウンジ', tag: '#縁側' },
+
+            // Tag Dedicated Topic Rooms
+            'tag-recipes': { type: 'tag', name: 'tag-マヨ料理', icon: 'fa-tag', desc: '#マヨ料理 タグ専用トピック：生野菜×マヨネーズの究極レシピ集', defaultTag: '#マヨ料理' },
+            'tag-cannon': { type: 'tag', name: 'tag-マヨ砲作戦', icon: 'fa-tag', desc: '#マヨ砲作戦 タグ専用トピック：超高圧マヨ砲照準・連射データ', defaultTag: '#マヨ砲作戦' },
+            'tag-hedoro': { type: 'tag', name: 'tag-屁怒絽防衛線', icon: 'fa-tag', desc: '#屁怒絽防衛線 タグ専用トピック：生花店主・屁怒絽の絶対防衛ライン観察', defaultTag: '#屁怒絽防衛線' },
+            'tag-gin-sweets': { type: 'tag', name: 'tag-銀時甘党言いがかり', icon: 'fa-tag', desc: '#銀時甘党 タグ専用トピック：銀さんのイチゴパフェ文句とマヨ派の論争', defaultTag: '#銀時甘党' },
+            'tag-5g-network': { type: 'tag', name: 'tag-5G電波報告', icon: 'fa-tag', desc: '#5G電波 タグ専用トピック：電波塔に誘引された珍客・敵兵レポート', defaultTag: '#5G電波' }
+        };
+
+        const avatarPresetsData = [
+            { avatar: '覇', color: 'bg-yellow-500 text-black', name: '覇王' },
+            { avatar: '土', color: 'bg-red-700 text-white', name: '土方' },
+            { avatar: '銀', color: 'bg-blue-600 text-white', name: '銀時' },
+            { avatar: '沖', color: 'bg-red-900 text-white', name: '沖田' },
+            { avatar: '神', color: 'bg-orange-600 text-white', name: '神楽' },
+            { avatar: '桂', color: 'bg-indigo-700 text-white', name: '桂' },
+            { avatar: '屁', color: 'bg-green-700 text-white', name: '屁怒絽' },
+            { avatar: '星', color: 'bg-amber-700 text-white', name: '星海坊主' },
+            { avatar: '坂', color: 'bg-yellow-600 text-white', name: '坂本' },
+            { avatar: '源', color: 'bg-gray-600 text-white', name: '源外' }
+        ];
+
+        // PRESET STAMPS (SVG / Encoded Visuals)
+        const presetStamps = [
+            { name: '特大マヨ丼', url: createSvgStampUrl('丼', '#FFC107', '土方スペシャルマヨ丼') },
+            { name: 'マヨネーズ砲', url: createSvgStampUrl('砲', '#D32F2F', '超高圧マヨ砲') },
+            { name: '屁怒絽の花', url: createSvgStampUrl('花', '#2E7D32', '屁怒絽の癒やや花') },
+            { name: 'ミントマヨ', url: createSvgStampUrl('歯', '#0288D1', '宇宙ミントマヨ') },
+            { name: '銀パフェ', url: createSvgStampUrl('苺', '#E91E63', 'いちごパフェ') },
+            { name: '5G電波塔', url: createSvgStampUrl('塔', '#FF9800', '帝国5G電波塔') }
+        ];
+
+        function createSvgStampUrl(symbol, color, title) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+                <rect width="200" height="150" rx="15" fill="#182028" stroke="${color}" stroke-width="4"/>
+                <circle cx="100" cy="65" r="40" fill="${color}" opacity="0.2"/>
+                <text x="100" y="80" font-family="sans-serif" font-weight="900" font-size="45" fill="${color}" text-anchor="middle">${symbol}</text>
+                <text x="100" y="130" font-family="sans-serif" font-weight="bold" font-size="14" fill="#FFFFFF" text-anchor="middle">${title}</text>
+            </svg>`;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+
+        // RENDER CHANNELS & TAG ROOMS
+        function renderChannels() {
+            const mainNav = document.getElementById('mainChannelList');
+            const tagNav = document.getElementById('tagChannelList');
+            
+            mainNav.innerHTML = '';
+            tagNav.innerHTML = '';
+
+            Object.keys(channels).forEach(key => {
+                const ch = channels[key];
+                const isActive = key === currentChannel;
+                
+                const btn = document.createElement('button');
+                btn.onclick = () => switchChannel(key);
+                btn.className = `w-full text-left px-3 py-2 rounded-xl transition-all flex items-center justify-between group ${
+                    isActive ? 'channel-active font-bold' : 'text-gray-400 hover:bg-samurai-hover hover:text-gray-200'
+                }`;
+
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2.5 truncate">
+                        <i class="fa-solid ${ch.icon} ${isActive ? 'text-mayo-400' : 'text-gray-500 group-hover:text-gray-300'} text-xs"></i>
+                        <span class="truncate">${ch.name}</span>
+                    </div>
+                    ${key === 'orders' ? '<span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>' : ''}
+                `;
+
+                if (ch.type === 'main') {
+                    mainNav.appendChild(btn);
+                } else {
+                    tagNav.appendChild(btn);
+                }
+            });
+        }
+
+        function switchChannel(key) {
+            currentChannel = key;
+            window.currentChannel = key;
+            const ch = channels[key];
+            
+            document.getElementById('currentChannelTitle').textContent = ch.name;
+            document.getElementById('currentChannelDesc').textContent = ch.desc;
+            document.getElementById('channelHeaderIcon').className = `fa-solid ${ch.icon} text-mayo-400 text-lg shrink-0`;
+            document.getElementById('chatInput').placeholder = `#${ch.name} へリアルタイムメッセージを送信...`;
+
+            // Reset active tag filter on channel switch
+            clearTagFilter();
+
+            renderChannels();
+            playPopSound();
+
+            if (window.subscribeToMessages) {
+                window.subscribeToMessages(key);
+            }
+        }
+
+        // RENDER MESSAGES & TAG HIGHLIGHTING
+        function renderMessagesList(messages) {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = '';
+
+            let filteredMessages = messages;
+
+            // Apply Tag Filter if Active
+            if (activeTagFilter) {
+                filteredMessages = messages.filter(m => {
+                    const textHasTag = m.text && m.text.includes(activeTagFilter);
+                    const arrayHasTag = m.tags && Array.isArray(m.tags) && m.tags.includes(activeTagFilter);
+                    return textHasTag || arrayHasTag;
+                });
+            }
+
+            if (filteredMessages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 text-xs py-12">
+                        <i class="fa-solid fa-comments text-3xl text-samurai-border mb-2 block"></i>
+                        ${activeTagFilter ? `タグ 「${escapeHtml(activeTagFilter)}」 に一致する投稿はありません。` : 'このチャンネルにはまだメッセージがありません。投稿してみましょう！'}
+                    </div>
+                `;
+                return;
+            }
+
+            filteredMessages.forEach(msg => {
+                const isUser = window.userProfile && msg.sender === window.userProfile.name;
+                const timeStr = msg.createdAt ? new Date(msg.createdAt.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '直近';
+
+                const formattedText = formatMessageTextWithTags(msg.text || '');
+
+                const msgEl = document.createElement('div');
+                msgEl.className = `flex items-start gap-3 group ${isUser ? 'bg-mayo-500/5 -mx-4 px-4 py-2 rounded-xl border-l-2 border-mayo-500' : 'py-1'}`;
+
+                let imageHtml = '';
+                if (msg.imageUrl) {
+                    imageHtml = `
+                        <div class="mt-2 relative inline-block max-w-sm">
+                            <img src="${msg.imageUrl}" onclick="openImageModal('${msg.imageUrl}', '${escapeHtml(msg.sender)}の添付画像')" 
+                                class="max-h-60 rounded-xl border border-samurai-border hover:border-mayo-500 transition-all cursor-pointer shadow-md object-cover">
+                        </div>
+                    `;
+                }
+
+                msgEl.innerHTML = `
+                    <div class="w-9 h-9 rounded-full ${msg.color || 'bg-yellow-600'} flex items-center justify-center font-bold text-white text-sm shrink-0 border border-white/20 shadow mt-0.5">
+                        ${msg.avatar || '覇'}
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-bold text-sm ${isUser ? 'text-mayo-300' : 'text-white'} font-maru">${escapeHtml(msg.sender)}</span>
+                            ${msg.rank ? `<span class="text-[10px] text-mayo-400 bg-black/40 px-1.5 py-0.2 rounded">${escapeHtml(msg.rank)}</span>` : ''}
+                            <span class="text-[10px] text-gray-500 font-mono">${timeStr}</span>
+                        </div>
+                        <p class="text-sm text-gray-200 mt-0.5 leading-relaxed break-words font-sans">${formattedText}</p>
+                        ${imageHtml}
+                    </div>
+                `;
+                container.appendChild(msgEl);
+            });
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Format message content with clickable hashtag pills
+        function formatMessageTextWithTags(text) {
+            const escaped = escapeHtml(text);
+            return escaped.replace(/(#[^\s#<]+)/g, (match) => {
+                return `<span class="hashtag-pill" onclick="filterByTag('${match}')">${match}</span>`;
+            });
+        }
+
+        function filterByTag(tagName) {
+            activeTagFilter = tagName;
+            document.getElementById('activeTagFilterBadge').classList.remove('hidden');
+            document.getElementById('activeTagFilterBadge').classList.add('flex');
+            document.getElementById('activeFilterTagName').textContent = tagName;
+            playPopSound();
+            renderMessagesList(window.cachedMessages || []);
+        }
+
+        function clearTagFilter() {
+            activeTagFilter = null;
+            document.getElementById('activeTagFilterBadge').classList.add('hidden');
+            document.getElementById('activeTagFilterBadge').classList.remove('flex');
+            renderMessagesList(window.cachedMessages || []);
+        }
+
+        function renderMembersList(onlineMembers) {
+            const list = document.getElementById('memberList');
+            const countEl = document.getElementById('onlineCount');
+            const sidebarCountEl = document.getElementById('sidebarOnlineCount');
+
+            list.innerHTML = '';
+            
+            const count = Math.max(1, onlineMembers.length);
+            countEl.textContent = count;
+            sidebarCountEl.textContent = count + '名';
+
+            const allMembers = [
+                { name: '土方十四郎', rank: '最高指導者', avatar: '土', color: 'bg-red-700', online: true },
+                { name: '坂田銀時', rank: '現場参謀', avatar: '銀', color: 'bg-blue-600', online: true },
+                { name: '沖田総悟', rank: '砲兵隊長', avatar: '沖', color: 'bg-red-900', online: true },
+                { name: '神楽', rank: '前線アタッカー', avatar: '神', color: 'bg-orange-600', online: true },
+                { name: '桂小太郎', rank: '現場指揮', avatar: '桂', color: 'bg-indigo-700', online: true },
+                { name: '屁怒絽', rank: '最高防衛顧問', avatar: '屁', color: 'bg-green-700', online: true }
+            ];
+
+            onlineMembers.forEach(mem => {
+                if (!allMembers.some(m => m.name === mem.name)) {
+                    allMembers.unshift({
+                        name: mem.name,
+                        rank: mem.rank || '帝国民',
+                        avatar: mem.avatar || '覇',
+                        color: mem.color || 'bg-yellow-500 text-black',
+                        online: true
+                    });
+                }
+            });
+
+            allMembers.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2.5 p-2 rounded-xl hover:bg-samurai-hover transition-all cursor-pointer';
+                div.onclick = () => insertMention(m.name);
+                div.innerHTML = `
+                    <div class="relative shrink-0">
+                        <div class="w-8 h-8 rounded-full ${m.color} flex items-center justify-center font-bold text-white text-xs border border-white/20 shadow">
+                            ${m.avatar}
+                        </div>
+                        <span class="w-2 h-2 ${m.online ? 'bg-green-500' : 'bg-gray-500'} rounded-full absolute bottom-0 right-0 border border-samurai-dark"></span>
+                    </div>
+                    <div class="overflow-hidden flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-white truncate text-xs">${escapeHtml(m.name)}</span>
+                        </div>
+                        <div class="text-[10px] text-mayo-400 truncate">${escapeHtml(m.rank)}</div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // IMAGE SELECTION & BASE64 CONVERSION
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                alert("画像サイズが大きすぎます (2MB以下の画像を選択してください)");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                attachedImageBase64 = e.target.result;
+                document.getElementById('imagePreview').src = attachedImageBase64;
+                document.getElementById('imageFileName').textContent = file.name;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                playPopSound();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearAttachedImage() {
+            attachedImageBase64 = null;
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        }
+
+        // PRESET STAMP PANEL
+        function renderPresetStamps() {
+            const grid = document.getElementById('presetStampGrid');
+            grid.innerHTML = '';
+
+            presetStamps.forEach(s => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => sendPresetStamp(s);
+                btn.className = 'bg-samurai-cardBg hover:bg-samurai-hover border border-samurai-border hover:border-mayo-400 p-2 rounded-xl flex flex-col items-center gap-1 transition-all group';
+                btn.innerHTML = `
+                    <img src="${s.url}" class="w-12 h-10 object-contain rounded">
+                    <span class="text-[10px] text-gray-300 group-hover:text-mayo-300 font-bold">${s.name}</span>
+                `;
+                grid.appendChild(btn);
+            });
+        }
+
+        function toggleStampPanel() {
+            const panel = document.getElementById('presetStampPanel');
+            panel.classList.toggle('hidden');
+            playPopSound();
+        }
+
+        async function sendPresetStamp(stamp) {
+            toggleStampPanel();
+            const chObj = channels[currentChannel];
+            const defaultTag = chObj.defaultTag ? [chObj.defaultTag] : [];
+
+            if (window.sendRealtimeMessage) {
+                await window.sendRealtimeMessage(currentChannel, `【スタンプ送信】${stamp.name}`, stamp.url, defaultTag);
+            }
+        }
+
+        // CHAT MESSAGE SUBMISSION
+        async function handleSendMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            let text = input.value.trim();
+
+            if (!text && !attachedImageBase64) return;
+
+            const chObj = channels[currentChannel];
+            const tags = [];
+            
+            // Auto append room default tag if inside a tag dedicated room
+            if (chObj.defaultTag) {
+                tags.push(chObj.defaultTag);
+                if (!text.includes(chObj.defaultTag)) {
+                    text += ` ${chObj.defaultTag}`;
+                }
+            }
+
+            input.value = '';
+            const imgToUpload = attachedImageBase64;
+            clearAttachedImage();
+
+            if (window.sendRealtimeMessage) {
+                await window.sendRealtimeMessage(currentChannel, text, imgToUpload, tags);
+            }
+        }
+
+        function insertTagToInput(tagName) {
+            const input = document.getElementById('chatInput');
+            input.value += ` ${tagName} `;
+            input.focus();
+        }
+
+        // KEYWORD BOT RESPONSES
+        window.checkAndTriggerAiResponse = function(channelKey, userText) {
+            let reply = null;
+
+            if (userText.includes('マヨ')) {
+                reply = { sender: '土方十四郎', rank: '最高指導者', avatar: '土', color: 'bg-red-700', text: 'そうだ、マヨネーズこそが宇宙の絶対真理だ。追いマヨネーズを許可する！ #マヨ絶対主義' };
+            } else if (userText.includes('銀時') || userText.includes('銀さん') || userText.includes('パフェ') || userText.includes('#銀時甘党')) {
+                reply = { sender: '坂田銀時', rank: '現場参謀', avatar: '銀', color: 'bg-blue-600', text: 'おいおい名前呼ぶなよ。今血糖値上げてるとこだからマヨラ様に直接言ってくれや。 #イチゴパフェ尊い' };
+            } else if (userText.includes('腹減った') || userText.includes('飯') || userText.includes('#マヨ料理')) {
+                reply = { sender: '神楽', rank: '前線アタッカー', avatar: '神', color: 'bg-orange-600', text: '新鮮なキャベツとマヨネーズご飯なら無限にあるアル！全部食うネ！ #マヨ大盛り' };
+            } else if (userText.includes('沖田') || userText.includes('攻撃') || userText.includes('#マヨ砲')) {
+                reply = { sender: '沖田総悟', rank: '砲兵隊長', avatar: '沖', color: 'bg-red-900', text: '了解しやした。超高圧マヨネーズ砲の照準を土方さんの後頭部にセット完了。 #マヨ砲発射' };
+            } else if (userText.includes('屁怒絽') || userText.includes('#屁怒絽防衛線')) {
+                reply = { sender: '屁怒絽', rank: '最高防衛顧問', avatar: '屁', color: 'bg-green-700', text: '我が花壇のお花たちもマヨネーズの恵みで元気に育っておりますよ…ふふふ。 #屁怒絽防衛線' };
+            }
+
+            if (reply && window.sendRealtimeMessage) {
+                setTimeout(() => {
+                    const chatCol = collection(window.db, 'artifacts', window.appId, 'public', 'data', `chat_${channelKey}`);
+                    addDoc(chatCol, {
+                        sender: reply.sender,
+                        rank: reply.rank,
+                        avatar: reply.avatar,
+                        color: reply.color,
+                        text: reply.text,
+                        tags: extractTagsFromText(reply.text),
+                        createdAt: new Date()
+                    });
+                }, 600);
+            }
+        };
+
+        // GEMINI AI DIRECTIVE GENERATOR
+        async function generateDailyCommandGemini() {
+            playSlashSound();
+            const speakerEl = document.getElementById('commandSpeaker');
+            const textEl = document.getElementById('commandText');
+            
+            speakerEl.textContent = "Gemini AI 通信中...";
+            textEl.textContent = "「全宇宙に配信する最新命令を受信中...」";
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemPrompt = "あなたはアニメ『銀魂』の土方十四郎、または坂田銀時、沖田総悟などの最高幹部です。大マヨネーズ銀河帝国の最高指導者として、全兵士（ユーザー）に向けた面白く理不尽でコミカルな『本日の絶対命令』を1言〜2言のセリフ形式で出力してください。「」で囲んでください。";
+            const userQuery = "今日のマヨネーズ帝国の兵士たちへの極限にマヨネーズ愛あふれる、またはカオスな命令を発令してください。";
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    })
+                });
+
+                const data = await response.json();
+                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (generatedText) {
+                    const randomLeader = ["土方十四郎 (最高指導者)", "坂田銀時 (現場参謀)", "沖田総悟 (砲兵隊長)", "桂小太郎 (現場指揮)"][Math.floor(Math.random()*4)];
+                    if (window.broadcastDirective) {
+                        await window.broadcastDirective(randomLeader, generatedText.trim());
+                    }
+                } else {
+                    fallbackCommand();
+                }
+            } catch (err) {
+                fallbackCommand();
+            }
+        }
+
+        function fallbackCommand() {
+            const list = [
+                { speaker: '土方十四郎 (最高指導者)', text: '「全軍、昼飯のマヨネーズ消費量を3倍に引き上げろ！一口食うごとにマヨネーズ万歳と唱えろ！反論は即切腹だ！」' },
+                { speaker: '坂田銀時 (現場参謀)', text: '「おい土方、この特製ミントマヨ歯磨き粉で顔洗ったら目が激痛なんだがどうにかしろ。イチゴパフェ支給しないとボイコットするぞ。」' },
+                { speaker: '沖田総悟 (砲兵隊長)', text: '「土方さん、超高圧マヨネーズ砲の試射ターゲットに土方さんの愛車を指定しておきやした。一瞬でマヨ塗れにして差し上げます。」' }
+            ];
+            const dir = list[Math.floor(Math.random() * list.length)];
+            if (window.broadcastDirective) {
+                window.broadcastDirective(dir.speaker, dir.text);
+            }
+        }
+
+        function handleCommandPledge() {
+            playSlashSound();
+            alert("「マヨラーの誓い」を完了しました！全宇宙の帝国臣民へ忠誠が送信されました！");
+        }
+
+        // IMAGE MODAL PREVIEW
+        function openImageModal(url, caption) {
+            document.getElementById('modalImageView').src = url;
+            document.getElementById('modalImageCaption').textContent = caption || '';
+            document.getElementById('imageModal').classList.remove('hidden');
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+        }
+
+        // CITIZEN MODAL & AVATAR SELECTION
+        function renderAvatarPresets() {
+            const container = document.getElementById('avatarPresets');
+            container.innerHTML = '';
+
+            avatarPresetsData.forEach(p => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => selectAvatarPreset(p);
+                btn.className = `w-10 h-10 rounded-full ${p.color} font-bold text-xs flex items-center justify-center border-2 border-transparent hover:border-white transition-all`;
+                btn.textContent = p.avatar;
+                btn.title = p.name;
+                container.appendChild(btn);
+            });
+        }
+
+        function selectAvatarPreset(preset) {
+            window.userProfile.avatar = preset.avatar;
+            window.userProfile.color = preset.color;
+            updateUserUi();
+            playPopSound();
+        }
+
+        function saveUserProfile() {
+            const nameInput = document.getElementById('inputUserName').value.trim();
+            const rankInput = document.getElementById('inputUserRank').value.trim();
+
+            if (nameInput) window.userProfile.name = nameInput;
+            if (rankInput) window.userProfile.rank = rankInput;
+
+            updateUserUi();
+            if (window.updatePresence) window.updatePresence();
+
+            toggleCitizenCardModal();
+            playSlashSound();
+        }
+
+        function updateUserUi() {
+            document.getElementById('userDisplayName').textContent = window.userProfile.name;
+            document.getElementById('sidebarUserRank').textContent = window.userProfile.rank;
+            
+            const avatarEl = document.getElementById('sidebarAvatar');
+            avatarEl.className = `w-9 h-9 rounded-full ${window.userProfile.color} flex items-center justify-center font-bold shadow border border-white/40`;
+            avatarEl.textContent = window.userProfile.avatar;
+        }
+
+        function toggleCitizenCardModal() {
+            const modal = document.getElementById('citizenModal');
+            modal.classList.toggle('hidden');
+
+            document.getElementById('inputUserName').value = window.userProfile.name;
+            document.getElementById('inputUserRank').value = window.userProfile.rank;
+
+            playPopSound();
+        }
+
+        // WEB AUDIO API
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function toggleAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const icon = document.getElementById('audioIcon');
+            icon.className = isAudioEnabled ? 'fa-solid fa-volume-high text-sm' : 'fa-solid fa-volume-xmark text-sm';
+            if (isAudioEnabled) playSquirtSound();
+        }
+
+        function playSquirtSound() {
+            if (!isAudioEnabled) return;
+            initAudio();
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.22);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.22);
+            } catch(e){}
+        }
+
+        function playPopSound() {
+            if (!isAudioEnabled) return;
+            initAudio();
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch(e){}
+        }
+
+        function playSlashSound() {
+            if (!isAudioEnabled) return;
+            initAudio();
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } catch(e){}
+        }
+
+        function insertMayoEmoji() {
+            const input = document.getElementById('chatInput');
+            input.value += ' 🧴 (マヨ) ';
+            input.focus();
+        }
+
+        function insertMention(name) {
+            const input = document.getElementById('chatInput');
+            input.value += ` @${name} `;
+            input.focus();
+        }
+
+        function toggleMemberList() {
+            const sidebar = document.getElementById('memberSidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('flex');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        window.onload = function() {
+            renderChannels();
+            renderAvatarPresets();
+            renderPresetStamps();
+            updateUserUi();
+        };
+    </script>
+</body>
+</html>
