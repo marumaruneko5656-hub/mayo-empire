@@ -1,0 +1,2 @@
+# mayonnaise_empire_command_hub
+大マヨネーズ銀河帝国 リアルタイム統合通信HUB - 帝国民向けコミュニケーションプラットフォーム
