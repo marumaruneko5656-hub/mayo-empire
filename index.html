@@ -1,620 +1,405 @@
 <!DOCTYPE html>
-<html lang="ja" class="dark">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大マヨネーズ銀河帝国 リアルタイム統合通信HUB</title>
-
-    <!-- Tailwind CSS -->
+    <title>大マヨネーズ銀河帝国 統合通信HUB</title>
+    <!-- Tailwind CSS & FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&family=Zen+Maru+Gothic:wght@700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDK (v9 Compatibility Mode for simple HTML script inclusion) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <!-- Firebase SDK (v10) -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        mayo: {
-                            50: '#FFFDE7',
-                            100: '#FFF9C4',
-                            200: '#FFF59D',
-                            300: '#FFE082',
-                            400: '#FFCA28',
-                            500: '#FFC107',
-                            600: '#FFB300',
-                            700: '#F57F17',
-                            accent: '#FFF8DC',
-                        },
-                        samurai: {
-                            dark: '#0B0F14',
-                            sidebar: '#12171D',
-                            chatBg: '#182028',
-                            cardBg: '#1E2933',
-                            hover: '#283644',
-                            border: '#2A3848'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['"Noto Sans JP"', 'sans-serif'],
-                        heading: ['"Zen Maru Gothic"', 'sans-serif'],
-                        samurai: ['"RocknRoll One"', 'sans-serif']
-                    }
-                }
-            }
-        }
+      // Firebase設定 (リアルタイムチャット用)
+      const firebaseConfig = {
+        apiKey: "AIzaSyA7vZoOms_DIZpXiIAbrHRRLoo1uQ2eDbA",
+        authDomain: "mayo-chat.firebaseapp.com",
+        databaseURL: "https://mayo-chat-default-rtdb.firebaseio.com",
+        projectId: "mayo-chat",
+        storageBucket: "mayo-chat.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:xxxx"
+      };
+
+      try {
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
+
+        window.sendFirebaseMessage = function(data) {
+          push(messagesRef, data);
+        };
+
+        onChildAdded(messagesRef, (snapshot) => {
+          const msg = snapshot.val();
+          if (window.appendMessageToUI) {
+            window.appendMessageToUI(msg);
+          }
+        });
+      } catch (e) {
+        console.warn("Firebase初期化待機中:", e);
+      }
     </script>
+
     <style>
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #12171D;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2A3848;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #FFCA28;
-        }
-        .mayo-gradient {
-            background: linear-gradient(135deg, #FFCA28 0%, #F57F17 100%);
-        }
-        .mayo-text-glow {
-            text-shadow: 0 0 10px rgba(255, 202, 40, 0.4);
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap');
+        body { font-family: 'Zen Kaku Gothic New', sans-serif; background-color: #0f1115; color: #e2e8f0; }
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-track { background: #111827; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
     </style>
 </head>
-<body class="bg-samurai-dark text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none">
+<body class="h-screen flex flex-col overflow-hidden select-none">
 
-    <!-- Top Header Navigation -->
-    <header class="h-16 bg-samurai-sidebar border-b border-samurai-border px-4 flex items-center justify-between shrink-0 shadow-lg z-20">
+    <!-- Header -->
+    <header class="bg-gray-900 border-b border-gray-800 px-4 py-2.5 flex items-center justify-between shrink-0 z-20">
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 mayo-gradient rounded-xl flex items-center justify-center text-slate-900 font-samurai font-black text-xl shadow-lg transform rotate-3 hover:rotate-0 transition-transform cursor-pointer">
-                マ
-            </div>
+            <div class="w-9 h-9 bg-yellow-400 rounded-lg flex items-center justify-center text-black font-black text-xl shadow-lg shadow-yellow-500/20">マ</div>
             <div>
-                <h1 class="font-samurai text-lg md:text-xl font-bold text-mayo-300 mayo-text-glow flex items-center gap-2">
-                    大マヨネーズ銀河帝国
-                    <span class="text-xs font-sans px-2 py-0.5 rounded-full bg-mayo-500/20 text-mayo-400 border border-mayo-500/30 hidden sm:inline-block">AI通信中</span>
-                </h1>
-                <p class="text-xs text-slate-400">全端末同期型・統合セキュリティ通信通信網</p>
+                <div class="flex items-center space-x-2">
+                    <h1 class="font-bold text-white tracking-wide">大マヨネーズ銀河帝国</h1>
+                    <span class="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded font-mono">Gemini AI / 全端末同期中</span>
+                </div>
             </div>
         </div>
 
-        <!-- Action Buttons -->
         <div class="flex items-center space-x-3">
-            <button onclick="toggleProfileModal()" class="flex items-center space-x-2 bg-mayo-500 hover:bg-mayo-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-sm transition-all shadow-md hover:shadow-mayo-500/20">
-                <i class="fa-solid font-black fa-id-card"></i>
-                <span class="hidden sm:inline">身分証設定</span>
+            <button onclick="openProfileModal()" class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center space-x-1 shadow">
+                <i class="fa-solid fa-id-card"></i>
+                <span>身分証・API設定</span>
             </button>
         </div>
     </header>
 
-    <!-- Main Content Area (3-Column Layout) -->
+    <!-- Main Container -->
     <div class="flex-1 flex overflow-hidden">
-
-        <!-- Left Sidebar: Channels -->
-        <aside class="w-64 bg-samurai-sidebar border-r border-samurai-border flex flex-col shrink-0 hidden md:flex">
-            <div class="p-4 border-b border-samurai-border">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">通信チャンネル</h2>
-                <nav class="space-y-1" id="channelList">
-                    <button onclick="switchChannel('general', '# マヨラー雑談処')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-mayo-500/10 text-mayo-300 font-medium text-sm border border-mayo-500/30 transition-all channel-btn text-left" data-channel="general">
-                        <i class="fa-solid fa-hashtag text-mayo-400"></i>
-                        <span>マヨラー雑談処</span>
-                    </button>
-                    <button onclick="switchChannel('yorozuya', '# 万事屋連絡網')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-samurai-hover hover:text-slate-200 font-medium text-sm transition-all channel-btn text-left" data-channel="yorozuya">
-                        <i class="fa-solid fa-hashtag text-slate-500"></i>
-                        <span>万事屋連絡網</span>
-                    </button>
-                    <button onclick="switchChannel('engawa', '# 居酒屋「縁側」')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-samurai-hover hover:text-slate-200 font-medium text-sm transition-all channel-btn text-left" data-channel="engawa">
-                        <i class="fa-solid fa-hashtag text-slate-500"></i>
-                        <span>居酒屋「縁側」</span>
-                    </button>
-                    <button onclick="switchChannel('shinsengumi', '# 真選組駐屯地')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-samurai-hover hover:text-slate-200 font-medium text-sm transition-all channel-btn text-left" data-channel="shinsengumi">
-                        <i class="fa-solid fa-shield-halved text-slate-500"></i>
-                        <span>真選組駐屯地</span>
-                    </button>
-                </nav>
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-gray-900/95 border-r border-gray-800 flex flex-col shrink-0">
+            <div class="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider">通信チャンネル</div>
+            <div class="flex-1 overflow-y-auto px-2 space-y-1">
+                <button onclick="switchChannel('general')" id="chan-general" class="chan-btn w-full text-left px-2.5 py-2 rounded-lg text-sm font-medium text-yellow-400 bg-yellow-500/10 border border-yellow-500/20">
+                    <i class="fa-solid fa-hashtag text-gray-400 mr-2"></i>マヨラー雑談処
+                </button>
+                <button onclick="switchChannel('yorozuya')" id="chan-yorozuya" class="chan-btn w-full text-left px-2.5 py-2 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800">
+                    <i class="fa-solid fa-hashtag text-gray-400 mr-2"></i>万事屋連絡網
+                </button>
+                <button onclick="switchChannel('tavern')" id="chan-tavern" class="chan-btn w-full text-left px-2.5 py-2 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800">
+                    <i class="fa-solid fa-hashtag text-gray-400 mr-2"></i>居酒屋「縁側」
+                </button>
             </div>
 
-            <!-- Current Profile Preview Box -->
-            <div class="mt-auto p-4 border-t border-samurai-border bg-samurai-dark/50 flex items-center space-x-3">
-                <div id="userAvatarBadge" class="w-10 h-10 rounded-lg mayo-gradient text-slate-950 font-bold flex items-center justify-center text-lg shadow-sm">
-                    霸
-                </div>
-                <div class="overflow-hidden">
-                    <p id="userNameDisplay" class="font-bold text-sm text-slate-200 truncate">オーガポン</p>
-                    <p id="userRoleDisplay" class="text-xs text-mayo-400 truncate">特命マヨ監察官</p>
+            <!-- Profile Footer -->
+            <div class="p-3 bg-gray-950 border-t border-gray-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2 overflow-hidden">
+                    <div id="user-avatar-preview" class="w-8 h-8 rounded-full bg-yellow-500 text-black flex items-center justify-center font-bold text-sm shrink-0">覇</div>
+                    <div class="truncate">
+                        <div id="user-name-display" class="text-xs font-bold text-white truncate">覇王 (Player)</div>
+                        <div id="user-title-display" class="text-[10px] text-gray-400 truncate">特命マヨ監察官</div>
+                    </div>
                 </div>
             </div>
         </aside>
 
-        <!-- Center Panel: Chat Feed -->
-        <main class="flex-1 flex flex-col bg-samurai-chatBg relative">
+        <!-- Main Chat Area -->
+        <main class="flex-1 flex flex-col bg-gray-950 relative overflow-hidden">
+            <!-- Messages List -->
+            <div id="chat-stream" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll"></div>
 
-            <!-- Channel Header Banner -->
-            <div class="h-12 bg-samurai-sidebar/70 backdrop-blur-md border-b border-samurai-border px-4 flex items-center justify-between z-10">
-                <div class="flex items-center space-x-2">
-                    <span id="currentChannelTitle" class="font-bold text-slate-200 text-sm md:text-base"># マヨラー雑談処</span>
-                </div>
-                <span class="text-xs text-slate-400 bg-samurai-cardBg px-2.5 py-1 rounded-full border border-samurai-border">
-                    <i class="fa-solid fa-users text-mayo-400 mr-1"></i><span id="onlineCountBadge">6</span> 隊員通信中
-                </span>
+            <!-- Attached File Preview -->
+            <div id="attachment-preview" class="hidden px-4 py-2 bg-gray-900 border-t border-gray-800 flex items-center justify-between text-xs text-yellow-400">
+                <span id="attachment-name"><i class="fa-solid fa-paperclip mr-1"></i> 添付ファイル</span>
+                <button onclick="clearAttachment()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <!-- Messages Stream Area -->
-            <div id="chatStream" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Messages will be dynamically rendered here -->
-            </div>
-
-            <!-- Media Preview Bar (Shown when a file is attached) -->
-            <div id="mediaPreviewContainer" class="hidden px-4 py-2 bg-samurai-cardBg border-t border-samurai-border flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div id="mediaTypeIcon" class="text-mayo-400 text-lg">
-                        <i class="fa-solid fa-image"></i>
-                    </div>
-                    <span id="mediaFileName" class="text-xs text-slate-300 font-mono truncate max-w-xs">image.png</span>
-                </div>
-                <button onclick="clearMediaAttachment()" class="text-slate-400 hover:text-red-400 transition-colors">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-
-            <!-- Message Input Area -->
-            <div class="p-3 bg-samurai-sidebar border-t border-samurai-border">
-                <form id="chatForm" onsubmit="handleSendMessage(event)" class="flex items-center space-x-2">
-                    <!-- Media Attachment Button -->
-                    <label class="cursor-pointer bg-samurai-cardBg hover:bg-samurai-hover text-slate-300 p-2.5 rounded-lg border border-samurai-border transition-all">
-                        <i class="fa-solid fa-paperclip text-slate-400 hover:text-mayo-400"></i>
-                        <input type="file" id="mediaInput" class="hidden" onchange="handleFileSelect(event)" accept="image/*,audio/*,.pdf,.doc,.docx,.txt">
+            <!-- Chat Input Bar -->
+            <div class="p-3 bg-gray-900 border-t border-gray-800 shrink-0">
+                <form id="chat-form" onsubmit="handleSendMessage(event)" class="flex items-center space-x-2">
+                    <label class="cursor-pointer p-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700">
+                        <i class="fa-solid fa-paperclip"></i>
+                        <input type="file" id="file-input" onchange="handleFileSelect(event)" class="hidden">
                     </label>
-
-                    <input 
-                        type="text" 
-                        id="messageInput"
-                        placeholder="メッセージを送信... (例: @土方 @銀時 こんにちは)" 
-                        class="flex-1 bg-samurai-dark text-slate-100 placeholder-slate-500 px-4 py-2.5 rounded-lg border border-samurai-border focus:outline-none focus:border-mayo-400 text-sm transition-all"
-                        autocomplete="off"
-                    >
-                    <button type="submit" class="bg-mayo-500 hover:bg-mayo-400 text-slate-950 font-bold px-5 py-2.5 rounded-lg text-sm transition-all shadow-md flex items-center space-x-1">
-                        <span>送信</span>
-                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    <input type="text" id="message-input" autocomplete="off" placeholder="メッセージを送信... (例: @土方 @銀時 こんにちは)" 
+                        class="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-400">
+                    <button type="submit" class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-5 py-2 rounded-lg text-sm shrink-0">
+                        送信
                     </button>
                 </form>
             </div>
         </main>
 
-        <!-- Right Sidebar: Online Members & AI Characters -->
-        <aside class="w-72 bg-samurai-sidebar border-l border-samurai-border flex flex-col shrink-0 hidden lg:flex">
-            <!-- Header for Online List -->
-            <div class="p-4 border-b border-samurai-border flex justify-between items-center">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-circle text-emerald-400 text-[8px] animate-pulse"></i>
-                    オンライン隊員
-                </h2>
-                <span id="onlineCounter" class="text-xs font-bold text-mayo-400 bg-mayo-500/10 px-2 py-0.5 rounded-full border border-mayo-500/20">6名</span>
+        <!-- Right Roster Sidebar -->
+        <aside class="w-60 bg-gray-900 border-l border-gray-800 flex flex-col shrink-0">
+            <div class="p-3 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-800 flex items-center justify-between">
+                <span>オンライン隊員</span>
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             </div>
-
-            <!-- Online Member List -->
-            <div class="flex-1 overflow-y-auto p-3 space-y-2" id="onlineMemberList">
-                <!-- User (Me) -->
-                <div class="p-2.5 rounded-lg bg-samurai-cardBg/60 border border-samurai-border flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="relative">
-                            <div id="onlineMyAvatar" class="w-9 h-9 rounded-lg mayo-gradient text-slate-950 font-bold flex items-center justify-center text-sm shadow">
-                                霸
-                            </div>
-                            <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-samurai-sidebar rounded-full"></span>
-                        </div>
-                        <div>
-                            <p id="onlineMyName" class="text-xs font-bold text-slate-100">オーガポン (あなた)</p>
-                            <p class="text-[10px] text-mayo-400">特命マヨ監察官</p>
-                        </div>
+            <div class="flex-1 overflow-y-auto p-2 space-y-2 text-xs">
+                <!-- User Profile Card -->
+                <div class="p-2 bg-gray-800/80 rounded border border-gray-700/80 flex items-center space-x-2">
+                    <div class="relative">
+                        <div id="roster-user-avatar" class="w-7 h-7 rounded-full bg-yellow-500 text-black font-bold flex items-center justify-center text-xs">覇</div>
+                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-gray-900"></span>
                     </div>
-                    <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded">ONLINE</span>
+                    <div class="truncate">
+                        <div id="roster-user-name" class="font-bold text-white truncate">覇王</div>
+                        <div class="text-[9px] text-gray-400">あなた</div>
+                    </div>
                 </div>
-
-                <div class="text-[11px] font-bold text-slate-500 uppercase px-1 pt-2">帝國AI幹部陣</div>
 
                 <!-- AI Members -->
-                <div class="p-2.5 rounded-lg bg-samurai-cardBg/40 hover:bg-samurai-cardBg border border-samurai-border flex items-center justify-between transition-all">
-                    <div class="flex items-center space-x-3">
-                        <div class="relative">
-                            <div class="w-9 h-9 rounded-lg bg-red-600 text-white font-bold flex items-center justify-center text-sm shadow">
-                                土
-                            </div>
-                            <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-samurai-sidebar rounded-full"></span>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-red-400">土方十四郎 <span class="text-slate-500">(@土方)</span></p>
-                            <p class="text-[10px] text-slate-400">マヨネーズ最高指導者</p>
-                        </div>
+                <div class="p-2 bg-gray-800/50 rounded border border-gray-800 flex items-center space-x-2">
+                    <div class="relative">
+                        <div class="w-7 h-7 rounded-full bg-red-700 text-white font-bold flex items-center justify-center text-xs">土</div>
+                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-gray-900"></span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-red-400">土方十四郎 (@土方)</div>
+                        <div class="text-[9px] text-gray-400">マヨネーズ最高指導者</div>
                     </div>
                 </div>
 
-                <div class="p-2.5 rounded-lg bg-samurai-cardBg/40 hover:bg-samurai-cardBg border border-samurai-border flex items-center justify-between transition-all">
-                    <div class="flex items-center space-x-3">
-                        <div class="relative">
-                            <div class="w-9 h-9 rounded-lg bg-sky-600 text-white font-bold flex items-center justify-center text-sm shadow">
-                                銀
-                            </div>
-                            <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-samurai-sidebar rounded-full"></span>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-sky-400">坂田銀時 <span class="text-slate-500">(@銀時)</span></p>
-                            <p class="text-[10px] text-slate-400">万事屋参謀・甘党代表</p>
-                        </div>
+                <div class="p-2 bg-gray-800/50 rounded border border-gray-800 flex items-center space-x-2">
+                    <div class="relative">
+                        <div class="w-7 h-7 rounded-full bg-blue-700 text-white font-bold flex items-center justify-center text-xs">銀</div>
+                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-gray-900"></span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-blue-400">坂田銀時 (@銀時)</div>
+                        <div class="text-[9px] text-gray-400">万事屋参謀・甘党</div>
                     </div>
                 </div>
 
-                <div class="p-2.5 rounded-lg bg-samurai-cardBg/40 hover:bg-samurai-cardBg border border-samurai-border flex items-center justify-between transition-all">
-                    <div class="flex items-center space-x-3">
-                        <div class="relative">
-                            <div class="w-9 h-9 rounded-lg bg-amber-600 text-white font-bold flex items-center justify-center text-sm shadow">
-                                沖
-                            </div>
-                            <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-samurai-sidebar rounded-full"></span>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-amber-400">沖田総悟 <span class="text-slate-500">(@沖田)</span></p>
-                            <p class="text-[10px] text-slate-400">サディスティック隊長</p>
-                        </div>
+                <div class="p-2 bg-gray-800/50 rounded border border-gray-800 flex items-center space-x-2">
+                    <div class="relative">
+                        <div class="w-7 h-7 rounded-full bg-red-900 text-white font-bold flex items-center justify-center text-xs">沖</div>
+                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-gray-900"></span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-red-300">沖田総悟 (@沖田)</div>
+                        <div class="text-[9px] text-gray-400">サディスティック隊長</div>
                     </div>
                 </div>
 
-                <div class="p-2.5 rounded-lg bg-samurai-cardBg/40 hover:bg-samurai-cardBg border border-samurai-border flex items-center justify-between transition-all">
-                    <div class="flex items-center space-x-3">
-                        <div class="relative">
-                            <div class="w-9 h-9 rounded-lg bg-orange-600 text-white font-bold flex items-center justify-center text-sm shadow">
-                                神
-                            </div>
-                            <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-samurai-sidebar rounded-full"></span>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-orange-400">神楽 <span class="text-slate-500">(@神楽)</span></p>
-                            <p class="text-[10px] text-slate-400">夜兎族アタッカー</p>
-                        </div>
+                <div class="p-2 bg-gray-800/50 rounded border border-gray-800 flex items-center space-x-2">
+                    <div class="relative">
+                        <div class="w-7 h-7 rounded-full bg-orange-600 text-white font-bold flex items-center justify-center text-xs">神</div>
+                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-gray-900"></span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-orange-400">神楽 (@神楽)</div>
+                        <div class="text-[9px] text-gray-400">夜兎族アタッカー</div>
                     </div>
                 </div>
             </div>
         </aside>
     </div>
 
-    <!-- Profile Edit Modal -->
-    <div id="profileModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-samurai-sidebar border border-samurai-border rounded-xl w-full max-w-md p-6 shadow-2xl relative">
-            <h3 class="text-lg font-bold text-mayo-400 font-samurai mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-id-card"></i> 隊員身分証登録設定
-            </h3>
-
-            <div class="space-y-4">
+    <!-- Modal Profile & API Key -->
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl max-w-md w-full p-5 space-y-4">
+            <h3 class="font-bold text-white text-base">身分証 & Gemini API 設定</h3>
+            <div class="space-y-3 text-xs">
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">隊員名（表示名）</label>
-                    <input type="text" id="inputProfileName" class="w-full bg-samurai-dark text-slate-100 px-3 py-2 rounded-lg border border-samurai-border focus:border-mayo-400 focus:outline-none text-sm">
+                    <label class="block text-gray-400 mb-1">名前</label>
+                    <input type="text" id="profile-name-input" class="w-full bg-gray-950 border border-gray-700 rounded p-2 text-white font-bold">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">アバター一文字</label>
-                    <input type="text" id="inputProfileAvatar" maxlength="2" class="w-full bg-samurai-dark text-slate-100 px-3 py-2 rounded-lg border border-samurai-border focus:border-mayo-400 focus:outline-none text-sm">
+                    <label class="block text-gray-400 mb-1">アイコン一文字</label>
+                    <input type="text" id="profile-avatar-input" maxlength="2" class="w-20 bg-gray-950 border border-gray-700 rounded p-2 text-center text-white font-bold">
                 </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">肩書・役職</label>
-                    <input type="text" id="inputProfileRole" class="w-full bg-samurai-dark text-slate-100 px-3 py-2 rounded-lg border border-samurai-border focus:border-mayo-400 focus:outline-none text-sm">
+                <div class="pt-2 border-t border-gray-800">
+                    <label class="block text-yellow-400 font-bold mb-1"><i class="fa-solid fa-key mr-1"></i> Gemini APIキー</label>
+                    <input type="password" id="profile-key-input" placeholder="AQ.Ab8RN6..." class="w-full bg-gray-950 border border-gray-700 rounded p-2 text-white font-mono text-xs">
+                    <p class="text-[10px] text-gray-500 mt-1">※キーはブラウザに安全に保存され、GitHub側で遮断されるのを防ぎます。</p>
                 </div>
             </div>
-
-            <div class="mt-6 flex justify-end space-x-3">
-                <button onclick="toggleProfileModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:bg-samurai-hover">キャンセル</button>
-                <button onclick="saveProfile()" class="px-4 py-2 bg-mayo-500 hover:bg-mayo-400 text-slate-950 font-bold rounded-lg text-xs transition-all">更新保存</button>
+            <div class="flex justify-end space-x-2 pt-3">
+                <button onclick="closeProfileModal()" class="px-3 py-1.5 bg-gray-800 text-gray-300 rounded text-xs">閉じる</button>
+                <button onclick="saveProfile()" class="px-4 py-1.5 bg-yellow-500 text-black rounded text-xs font-bold">保存</button>
             </div>
         </div>
     </div>
 
-    <!-- Application Logic -->
     <script>
-        // --- 1. CONFIG & SYSTEM STATE ---
-        const GEMINI_API_KEY = "AQ.Ab8RN6I4tcKZt-m4A0dSE8d4obcaq3ysP5UMRF6V3puJKC0Www";
+        let currentUser = JSON.parse(localStorage.getItem('mayo_user')) || { name: '覇王 (Player)', title: '特命マヨ監察官', avatar: '覇', geminiKey: '' };
+        let attachedFile = null;
         let currentChannel = 'general';
-        let selectedMedia = null; // Stores attached base64 media
 
-        // User State (Local Storage persistent)
-        let currentUser = {
-            id: 'user_' + Math.random().toString(36).substr(2, 9),
-            name: localStorage.getItem('mayo_user_name') || 'オーガポン',
-            avatar: localStorage.getItem('mayo_user_avatar') || '霸',
-            role: localStorage.getItem('mayo_user_role') || '特命マヨ監察官'
-        };
+        window.addEventListener('DOMContentLoaded', () => { updateProfileUI(); });
 
-        // Character Prompts (銀魂キャラクター設定)
-        const CHARACTER_PROMPTS = {
-            "土方": `あなたは「銀魂」の土方十四郎です。マヨネーズをこよなく愛する真選組副長。「〜だろーが」「〜じゃねえよ」「マヨネーズが足りねえ」といった口調で話します。厳格でツンデレ気質、マヨネーズに関する話題には超情熱的になります。簡潔に1〜3文で返答してください。`,
-            "銀時": `あなたは「銀魂」の坂田銀時です。万事屋のリーダーで無気力な甘党。「〜だろ」「〜じゃねーか」「いちご牛乳」などの言葉を使います。普段はやる気がないですが情に厚く、ユーモアたっぷりにボケたりツッコミを入れたりします。簡潔に1〜3文で返答してください。`,
-            "沖田": `あなたは「銀魂」の沖田総悟です。真選組一番隊隊長で腹黒ドS。「〜でさァ」「〜ですぜ」という江戸っ子口調で話します。土方副長を蹴落とそうとする言動やドSな発言を爽やかにかまします。簡潔に1〜3文で返答してください。`,
-            "神楽": `あなたは「銀魂」の神楽です。万事屋のヒロインで夜兎族の少女。「〜アル」「〜ネ」「〜ヨ」という語尾を使って話します。口が悪く大食いで自由奔放、酢昆布が大好物です。簡潔に1〜3文で返答してください。`
-        };
-
-        // --- 2. INITIALIZATION ---
-        window.onload = function() {
-            updateUserUIDisplay();
-            renderInitialMessages();
-        };
-
-        function updateUserUIDisplay() {
-            document.getElementById('userNameDisplay').textContent = currentUser.name;
-            document.getElementById('userRoleDisplay').textContent = currentUser.role;
-            document.getElementById('userAvatarBadge').textContent = currentUser.avatar;
-            document.getElementById('onlineMyName').textContent = currentUser.name + ' (あなた)';
-            document.getElementById('onlineMyAvatar').textContent = currentUser.avatar;
-        }
-
-        // --- 3. CHANNEL SWITCHING ---
-        function switchChannel(channelId, titleText) {
-            currentChannel = channelId;
-            document.getElementById('currentChannelTitle').textContent = titleText;
-            
-            // Highlight active button
-            document.querySelectorAll('.channel-btn').forEach(btn => {
-                if (btn.dataset.channel === channelId) {
-                    btn.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-mayo-500/10 text-mayo-300 font-medium text-sm border border-mayo-500/30 transition-all channel-btn text-left";
-                    btn.querySelector('i').className = "fa-solid fa-hashtag text-mayo-400";
-                } else {
-                    btn.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-samurai-hover hover:text-slate-200 font-medium text-sm transition-all channel-btn text-left";
-                    btn.querySelector('i').className = "fa-solid fa-hashtag text-slate-500";
-                }
+        function switchChannel(chan) {
+            currentChannel = chan;
+            document.querySelectorAll('.chan-btn').forEach(b => {
+                b.classList.remove('text-yellow-400', 'bg-yellow-500/10', 'border', 'border-yellow-500/20');
+                b.classList.add('text-gray-400');
             });
-
-            renderInitialMessages();
+            const btn = document.getElementById(`chan-${chan}`);
+            if (btn) btn.classList.add('text-yellow-400', 'bg-yellow-500/10', 'border', 'border-yellow-500/20');
         }
 
-        // --- 4. MESSAGE RENDERING ---
-        const dummyMessages = {
-            general: [
-                { id: '1', sender: '土方十四郎', avatar: '土', role: 'マヨネーズ最高指導者', content: 'おい全員聴け！今日から全ての食事にマヨネーズをチューブ1本追加することが義務付けられた！異論は認めん！', time: '10:15', isAi: true, color: 'bg-red-600' },
-                { id: '2', sender: '坂田銀時', avatar: '銀', role: '万事屋参謀', content: 'おいおいマヨラー副長、朝から胃もたれするような発言やめてくんねーかな。時代はイチゴパフェなんだよイチゴパフェ。', time: '10:16', isAi: true, color: 'bg-sky-600' }
-            ],
-            yorozuya: [
-                { id: '1', sender: '神楽', avatar: '神', role: '夜兎族アタッカー', content: '銀ちゃん！今日のおやつは酢昆布マシマシで頼むアル！', time: '09:30', isAi: true, color: 'bg-orange-600' }
-            ],
-            engawa: [
-                { id: '1', sender: '沖田総悟', avatar: '沖', role: 'サディスティック隊長', content: '土方さん、バズーカの狙撃演習の的にマヨネーズボトル置いておきましたぜ。', time: '11:00', isAi: true, color: 'bg-amber-600' }
-            ],
-            shinsengumi: [
-                { id: '1', sender: '土方十四郎', avatar: '土', role: '副長', content: '局中法度追加！マヨネーズを残した者は切腹！！', time: '08:00', isAi: true, color: 'bg-red-600' }
-            ]
-        };
-
-        function renderInitialMessages() {
-            const stream = document.getElementById('chatStream');
-            stream.innerHTML = '';
-
-            const list = dummyMessages[currentChannel] || [];
-            list.forEach(msg => appendMessageUI(msg));
-            stream.scrollTop = stream.scrollHeight;
-        }
-
-        function appendMessageUI(msg) {
-            const stream = document.getElementById('chatStream');
-            const isMe = msg.sender === currentUser.name;
-            
-            const msgEl = document.createElement('div');
-            msgEl.className = `flex space-x-3 ${isMe ? 'flex-row-reverse space-x-reverse' : ''} items-start`;
-
-            let avatarBg = msg.color || 'bg-mayo-500 text-slate-950 font-bold';
-            
-            let mediaContent = '';
-            if (msg.media) {
-                if (msg.media.type.startsWith('image/')) {
-                    mediaContent = `<div class="mt-2 rounded-lg overflow-hidden max-w-xs border border-samurai-border">
-                        <img src="${msg.media.url}" class="w-full h-auto object-cover max-h-60" />
-                    </div>`;
-                } else if (msg.media.type.startsWith('audio/')) {
-                    mediaContent = `<div class="mt-2">
-                        <audio controls src="${msg.media.url}" class="max-w-xs"></audio>
-                    </div>`;
-                } else {
-                    mediaContent = `<div class="mt-2 p-2 bg-samurai-dark rounded border border-samurai-border flex items-center space-x-2 text-xs">
-                        <i class="fa-solid fa-file-arrow-down text-mayo-400"></i>
-                        <a href="${msg.media.url}" download="${msg.media.name}" class="text-mayo-300 underline truncate max-w-xs">${msg.media.name}</a>
-                    </div>`;
-                }
-            }
-
-            msgEl.innerHTML = `
-                <div class="w-9 h-9 rounded-lg ${avatarBg} font-bold flex items-center justify-center text-sm shadow shrink-0">
-                    ${msg.avatar}
-                </div>
-                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]">
-                    <div class="flex items-center space-x-2 mb-1">
-                        <span class="text-xs font-bold ${msg.isAi ? 'text-mayo-400' : 'text-slate-300'}">${msg.sender}</span>
-                        <span class="text-[10px] text-slate-500">${msg.time}</span>
-                    </div>
-                    <div class="p-3 rounded-xl text-sm ${isMe ? 'bg-mayo-500 text-slate-950 font-medium' : 'bg-samurai-cardBg text-slate-100 border border-samurai-border'} shadow-md">
-                        <p class="whitespace-pre-wrap">${escapeHtml(msg.content)}</p>
-                        ${mediaContent}
-                    </div>
-                </div>
-            `;
-            
-            stream.appendChild(msgEl);
-            stream.scrollTop = stream.scrollHeight;
-        }
-
-        function escapeHtml(text) {
-            return text.replace(/[&<>"']/g, function(m) {
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-            });
-        }
-
-        // --- 5. MEDIA ATTACHMENT HANDLERS ---
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(e) {
-                selectedMedia = {
-                    name: file.name,
-                    type: file.type,
-                    url: e.target.result
-                };
-                
-                document.getElementById('mediaFileName').textContent = file.name;
-                document.getElementById('mediaPreviewContainer').classList.remove('hidden');
+            reader.onload = function(evt) {
+                attachedFile = { name: file.name, type: file.type, data: evt.target.result };
+                document.getElementById('attachment-name').innerText = `📎 ${file.name}`;
+                document.getElementById('attachment-preview').classList.remove('hidden');
             };
             reader.readAsDataURL(file);
         }
 
-        function clearMediaAttachment() {
-            selectedMedia = null;
-            document.getElementById('mediaInput').value = '';
-            document.getElementById('mediaPreviewContainer').classList.add('hidden');
+        function clearAttachment() {
+            attachedFile = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('attachment-preview').classList.hidden = true;
+            document.getElementById('attachment-preview').classList.add('hidden');
         }
 
-        // --- 6. SEND MESSAGE & GEMINI AI TRIGGER ---
-        async function handleSendMessage(e) {
+        function handleSendMessage(e) {
             e.preventDefault();
-            const input = document.getElementById('messageInput');
+            const input = document.getElementById('message-input');
             const text = input.value.trim();
+            if (!text && !attachedFile) return;
 
-            if (!text && !selectedMedia) return;
-
-            const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const userMsg = {
-                id: Date.now().toString(),
-                sender: currentUser.name,
-                avatar: currentUser.avatar,
-                role: currentUser.role,
-                content: text,
-                time: timeNow,
-                isAi: false,
-                media: selectedMedia ? { ...selectedMedia } : null
+            const msgData = {
+                userName: currentUser.name,
+                userAvatar: currentUser.avatar,
+                text: text,
+                file: attachedFile,
+                timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             };
 
-            // Push message to active channel list & UI
-            if (!dummyMessages[currentChannel]) dummyMessages[currentChannel] = [];
-            dummyMessages[currentChannel].push(userMsg);
-            appendMessageUI(userMsg);
+            if (window.sendFirebaseMessage) {
+                window.sendFirebaseMessage(msgData);
+            } else {
+                window.appendMessageToUI(msgData);
+            }
 
-            // Clear Input
             input.value = '';
-            clearMediaAttachment();
+            clearAttachment();
 
-            // Check for AI Characters Trigger
-            checkAndTriggerAI(text);
+            // AIキャラ応答チェック
+            checkAIResponse(text);
         }
 
-        async function checkAndTriggerAI(text) {
-            const targets = [
-                { key: '土方', name: '土方十四郎', avatar: '土', role: 'マヨネーズ最高指導者', color: 'bg-red-600' },
-                { key: '銀時', name: '坂田銀時', avatar: '銀', role: '万事屋参謀', color: 'bg-sky-600' },
-                { key: '沖田', name: '沖田総悟', avatar: '沖', role: 'サディスティック隊長', color: 'bg-amber-600' },
-                { key: '神楽', name: '神楽', avatar: '神', role: '夜兎族アタッカー', color: 'bg-orange-600' }
+        async function checkAIResponse(userText) {
+            const charaConfigs = [
+                { keyword: '土方', name: '土方十四郎', avatar: '土', prompt: 'あなたは銀魂の土方十四郎です。マヨネーズをこよなく愛し、少し荒っぽいですが筋の通った口調で短く返答してください。' },
+                { keyword: '銀時', name: '坂田銀時', avatar: '銀', prompt: 'あなたは銀魂の坂田銀時です。やる気のないだるそうな口調で、甘党やパフェの話を交えつつ短く返答してください。' },
+                { keyword: '沖田', name: '沖田総悟', avatar: '沖', prompt: 'あなたは銀魂の沖田総悟です。語尾に「〜でさぁ」をつけ、土方への嫌がらせやサディスティックな発言を含めて短く返答してください。' },
+                { keyword: '神楽', name: '神楽', avatar: '神', prompt: 'あなたは銀魂の神楽です。語尾に「〜アル」「〜ネ」をつけ、酢昆布や食い気満々の元気な口調で短く返答してください。' }
             ];
 
-            for (const char of targets) {
-                if (text.includes(char.key) || text.includes(`@${char.key}`)) {
-                    // Call Gemini API
-                    fetchGeminiReply(char, text);
+            for (const c of charaConfigs) {
+                if (userText.includes(c.keyword) || userText.includes(`@${c.keyword}`)) {
+                    setTimeout(async () => {
+                        const replyText = await fetchGeminiReply(c.prompt, userText);
+                        const aiMsg = {
+                            userName: c.name,
+                            userAvatar: c.avatar,
+                            text: replyText,
+                            isAI: true,
+                            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        };
+                        if (window.sendFirebaseMessage) window.sendFirebaseMessage(aiMsg);
+                        else window.appendMessageToUI(aiMsg);
+                    }, 1000);
+                    break;
                 }
             }
         }
 
-        async function fetchGeminiReply(character, userPrompt) {
-            const systemPrompt = CHARACTER_PROMPTS[character.key] || "語尾にマヨをつけて話してください。";
-
+        async function fetchGeminiReply(systemPrompt, userQuery) {
+            const apiKey = currentUser.geminiKey;
+            if (!apiKey) {
+                return '……（APIキーが未設定だ。右上の「身分証＆API設定」からGemini APIキーを入力してくれ）';
+            }
             try {
-                // Call Google Gemini API with specified Key
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [
-                            {
-                                role: 'user',
-                                parts: [{ text: `${systemPrompt}\n\nユーザーの発言: "${userPrompt}"` }]
-                            }
-                        ]
+                        contents: [{ parts: [{ text: `${systemPrompt}\n\nユーザーのメッセージ: "${userQuery}"` }] }]
                     })
                 });
-
                 const data = await response.json();
-                let aiReplyText = "";
-
-                if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-                    aiReplyText = data.candidates[0].content.parts[0].text;
+                if (data.candidates && data.candidates[0]) {
+                    return data.candidates[0].content.parts[0].text;
                 } else {
-                    aiReplyText = "……（通信の乱れで返答が聞き取れなかったマヨ）";
+                    return '……（APIキーが無効か、通信レスポンスを取得できなかったようだ）';
                 }
-
-                const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const aiMsg = {
-                    id: Date.now().toString(),
-                    sender: character.name,
-                    avatar: character.avatar,
-                    role: character.role,
-                    content: aiReplyText,
-                    time: timeNow,
-                    isAi: true,
-                    color: character.color
-                };
-
-                dummyMessages[currentChannel].push(aiMsg);
-                appendMessageUI(aiMsg);
-
-            } catch (error) {
-                console.error("Gemini API Error:", error);
-                const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const errorMsg = {
-                    id: Date.now().toString(),
-                    sender: character.name,
-                    avatar: character.avatar,
-                    role: character.role,
-                    content: "……（通信エラーで返答が遮断されたようだ）",
-                    time: timeNow,
-                    isAi: true,
-                    color: character.color
-                };
-                appendMessageUI(errorMsg);
+            } catch (err) {
+                return '……（通信エラーが発生したようだ）';
             }
         }
 
-        // --- 7. MODAL & PROFILE UPDATE ---
-        function toggleProfileModal() {
-            const modal = document.getElementById('profileModal');
-            document.getElementById('inputProfileName').value = currentUser.name;
-            document.getElementById('inputProfileAvatar').value = currentUser.avatar;
-            document.getElementById('inputProfileRole').value = currentUser.role;
-            modal.classList.toggle('hidden');
+        window.appendMessageToUI = function(m) {
+            const container = document.getElementById('chat-stream');
+            if (!container) return;
+
+            const isMe = m.userName === currentUser.name;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex items-start space-x-3 ${isMe ? 'flex-row-reverse space-x-reverse' : ''}`;
+
+            let fileHTML = '';
+            if (m.file) {
+                if (m.file.type.startsWith('image/')) {
+                    fileHTML = `<img src="${m.file.data}" class="mt-2 max-h-48 rounded border border-gray-700">`;
+                } else if (m.file.type.startsWith('audio/')) {
+                    fileHTML = `<audio controls src="${m.file.data}" class="mt-2 w-full"></audio>`;
+                } else {
+                    fileHTML = `<a href="${m.file.data}" download="${m.file.name}" class="mt-2 block p-2 bg-gray-900 border border-gray-700 rounded text-xs text-yellow-400">💾 ${m.file.name} (ダウンロード)</a>`;
+                }
+            }
+
+            msgDiv.innerHTML = `
+                <div class="w-9 h-9 rounded-full ${m.isAI ? 'bg-red-700 text-white' : (isMe ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-white')} flex items-center justify-center font-bold text-sm shrink-0 shadow">
+                    ${m.userAvatar || '名'}
+                </div>
+                <div class="max-w-xl ${isMe ? 'items-end' : 'items-start'} flex flex-col">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="text-xs font-bold text-gray-300">${m.userName}</span>
+                        <span class="text-[10px] text-gray-600">${m.timestamp}</span>
+                    </div>
+                    <div class="p-3 rounded-2xl text-sm ${isMe ? 'bg-yellow-500 text-black font-medium' : 'bg-gray-800 text-gray-100 border border-gray-700/60'} shadow-md">
+                        <div>${m.text}</div>
+                        ${fileHTML}
+                    </div>
+                </div>
+            `;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        };
+
+        function updateProfileUI() {
+            document.getElementById('user-name-display').innerText = currentUser.name;
+            document.getElementById('user-avatar-preview').innerText = currentUser.avatar;
+            document.getElementById('roster-user-name').innerText = currentUser.name;
+            document.getElementById('roster-user-avatar').innerText = currentUser.avatar;
+        }
+
+        function openProfileModal() {
+            document.getElementById('profile-name-input').value = currentUser.name;
+            document.getElementById('profile-avatar-input').value = currentUser.avatar;
+            document.getElementById('profile-key-input').value = currentUser.geminiKey || '';
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
         }
 
         function saveProfile() {
-            const name = document.getElementById('inputProfileName').value.trim();
-            const avatar = document.getElementById('inputProfileAvatar').value.trim();
-            const role = document.getElementById('inputProfileRole').value.trim();
-
-            if (name) currentUser.name = name;
-            if (avatar) currentUser.avatar = avatar;
-            if (role) currentUser.role = role;
-
-            localStorage.setItem('mayo_user_name', currentUser.name);
-            localStorage.setItem('mayo_user_avatar', currentUser.avatar);
-            localStorage.setItem('mayo_user_role', currentUser.role);
-
-            updateUserUIDisplay();
-            toggleProfileModal();
+            currentUser.name = document.getElementById('profile-name-input').value || '覇王';
+            currentUser.avatar = document.getElementById('profile-avatar-input').value || '覇';
+            currentUser.geminiKey = document.getElementById('profile-key-input').value.trim();
+            localStorage.setItem('mayo_user', JSON.stringify(currentUser));
+            updateProfileUI();
+            closeProfileModal();
         }
     </script>
 </body>
